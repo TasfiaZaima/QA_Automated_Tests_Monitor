@@ -15,19 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install # Changed from npm ci for better stability
+        run: npm install
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
       - name: Execute QA Suite
+        id: playwright_test
         run: npx playwright test
         continue-on-error: true
 
@@ -58,15 +61,11 @@ jobs:
           publish_dir: allure-history
 
       - name: Discord Alert on Failure
-        if: failure()
+        if: always() && steps.playwright_test.outcome == 'failure'
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          if [ -z "$WEBHOOK_URL" ]; then
-            echo "Error: DISCORD_WEBHOOK is empty. Check your GitHub Secrets."
-            exit 1
-          fi
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d "{\"content\": \"🚨 **QA Monitor Failure Detected!** \nView Live Dashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}" \
+               -d "{\"content\": \"🚨 **QA Monitor: Test Failures Detected!** \nView Live Dashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}" \
                "$WEBHOOK_URL"
