@@ -1,8 +1,8 @@
-name: QA Auto-Monitor
+name: Nightly QA Auto-Monitor
 
 on:
   schedule:
-    - cron: '30 15 * * *' # 9:30 PM IST
+    - cron: '30 15 * * *'
   workflow_dispatch:
 
 permissions:
@@ -19,11 +19,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install # Changed from npm ci for better stability
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -48,10 +47,10 @@ jobs:
           gh_pages: gh-pages-dir
           allure_report: allure-report
           allure_history: allure-history
-          keep_reports: 30
+          keep_reports: 20
 
       - name: Deploy Health Dashboard
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -60,8 +59,14 @@ jobs:
 
       - name: Discord Alert on Failure
         if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "Error: DISCORD_WEBHOOK is empty. Check your GitHub Secrets."
+            exit 1
+          fi
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content": "**QA Monitor: Test Failures Detected!** \nEnvironment: Production \nDashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"}' \
-               ${{ secrets.DISCORD_WEBHOOK }}
+               -d "{\"content\": \"🚨 **QA Monitor Failure Detected!** \nView Live Dashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}" \
+               "$WEBHOOK_URL"
