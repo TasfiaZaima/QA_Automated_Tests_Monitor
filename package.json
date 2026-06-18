@@ -1,0 +1,8 @@
+{
+  "name": "nightly-pulse",
+  "version": "1.0.0",
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "allure-playwright": "^3.0.0-beta.2"
+  }
+}
