@@ -6,13 +6,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout Code
@@ -21,17 +24,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: lts/*
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: npm exec playwright -- install --with-deps chromium
 
       - name: Execute QA Suite
         id: playwright_test
-        run: npx playwright test
+        run: |
+          rm -rf allure-results allure-report
+          npm exec playwright -- test
         continue-on-error: true
 
       - name: Load Allure History
@@ -52,13 +58,20 @@ jobs:
           allure_history: allure-history
           keep_reports: 20
 
-      - name: Deploy Health Dashboard
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        if: always()
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
         if: always()
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-history
+          path: allure-history
+
+      - name: Deploy Health Dashboard
+        id: deployment
+        uses: actions/deploy-pages@v4
+        if: always()
 
       - name: Discord Alert on Failure
         if: always() && steps.playwright_test.outcome == 'failure'
