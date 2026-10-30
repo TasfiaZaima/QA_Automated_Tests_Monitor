@@ -4,17 +4,17 @@ Playwright-based QA monitoring for UI and API health checks. The tests run autom
 
 ## Automation at a glance
 
-| Event | Workflow | What happens | Discord notification |
-| --- | --- | --- | --- |
-| Push to `main` or `master` | `playwright.yml` | UI and API tests run; the Playwright report is uploaded as an artifact | GitHub/Discord status messages may be sent |
-| Pull request targeting `main` or `master` | `playwright.yml` | UI and API tests run to validate the proposed changes | GitHub/Discord status messages may be sent |
-| Push to `main` | `static.yml` | Tests run and the Playwright report is deployed to GitHub Pages | GitHub/Discord `test` and `deploy` status messages may be sent |
-| Every day at `15:30 UTC` (`21:30` Bangladesh time) | `qa-monitor.yml` | Full QA suite runs, Allure history is generated, and the dashboard is deployed to GitHub Pages | GitHub/Discord `monitor` status; custom failure alert if tests fail |
-| Manual **Run workflow** | `qa-monitor.yml` | The nightly QA monitoring workflow runs immediately | GitHub/Discord `monitor` status; custom failure alert if tests fail |
+This project runs automated QA checks through GitHub Actions at several points in the development cycle.
+
+- When code is pushed to `main`, `playwright.yml` runs the UI and API tests and stores the Playwright HTML report as an artifact.
+- When a pull request targets `main`, `playwright.yml` runs the same tests to validate the proposed changes before they are merged.
+- When code is pushed to `main`, `static.yml` runs the tests and deploys the generated Playwright report to GitHub Pages.
+- Every day at `15:30 UTC` (`21:30` Bangladesh time), `qa-monitor.yml` runs the full QA suite, builds the Allure report with history, and deploys the dashboard to GitHub Pages.
+- The nightly monitor can also be started manually from the GitHub Actions tab with **Run workflow**.
 
 The main purpose of this project is to catch regressions automatically after commits and pull requests, while the nightly monitor provides an additional daily health check. Discord can show both successful and failed `main` workflow runs when the repository is connected through a GitHub/Discord integration.
 
-Because multiple workflows run for a push to `main`, Discord may show several messages for one commit, such as `test success`, `deploy success`, `monitor success`, or `GitHub Actions checks success`. Failure messages can appear in the same way. These messages are workflow/check status notifications and are separate from the custom QA failure alert.
+Because multiple workflows can run for a push to `main`, Discord may show several messages for one commit, such as `test success`, `deploy success`, or `GitHub Actions checks success`. Failure messages can appear in the same way. These messages are workflow/check status notifications and are separate from the custom QA failure alert.
 
 ## What is covered
 
@@ -138,9 +138,15 @@ There are two Discord notification sources:
 
 This is why both success and failure messages can appear, and why one run can produce more than one Discord message.
 
+### GitHub email notifications
+
+The repository does not contain an email-sending action. Emails are controlled by GitHub's notification settings. GitHub Actions can email the user who triggered a workflow when it completes, or email only for failed workflows if that preference is selected. Scheduled workflow notifications are associated with the user who created or last updated the schedule.
+
+Notification preferences can be managed at **GitHub Settings → Notifications → System → Actions**. The available choices include email notifications, failed-workflow-only notifications, or no workflow emails.
+
 ### Other workflows
 
-- `playwright.yml` runs tests on pushes and pull requests targeting `main` or `master` and uploads the Playwright HTML report as an artifact.
+- `playwright.yml` runs tests on pushes and pull requests targeting `main` and uploads the Playwright HTML report as an artifact.
 - `static.yml` runs the Playwright tests and deploys the resulting Playwright report to GitHub Pages when changes are pushed to `main`.
 
 ## Project structure
