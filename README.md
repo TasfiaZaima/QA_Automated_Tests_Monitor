@@ -1,18 +1,20 @@
 # QA Automated Tests Monitor
 
-Playwright-based QA monitoring for UI and API health checks. The tests run automatically in GitHub Actions on code changes and on a nightly schedule, with Allure reporting and Discord alerts for failures.
+Playwright-based QA monitoring for UI and API health checks. The tests run automatically in GitHub Actions on code changes and on a nightly schedule, with Allure reporting, GitHub Pages deployments, Discord workflow/check notifications, and custom failure alerts.
 
 ## Automation at a glance
 
 | Event | Workflow | What happens | Discord notification |
 | --- | --- | --- | --- |
-| Push to `main` or `master` | `playwright.yml` | UI and API tests run; the Playwright report is uploaded as an artifact | No |
-| Pull request targeting `main` or `master` | `playwright.yml` | UI and API tests run to validate the proposed changes | No |
-| Every day at `15:30 UTC` (`21:30` Bangladesh time) | `qa-monitor.yml` | Full QA suite runs, Allure history is generated, and the dashboard is deployed to GitHub Pages | Custom failure alert; success may also appear through the GitHub/Discord integration |
-| Manual **Run workflow** | `qa-monitor.yml` | The nightly QA monitoring workflow runs immediately | Custom failure alert; success may also appear through the GitHub/Discord integration |
-| Push to `main` | `static.yml` | The Playwright report is deployed to GitHub Pages | No |
+| Push to `main` or `master` | `playwright.yml` | UI and API tests run; the Playwright report is uploaded as an artifact | GitHub/Discord status messages may be sent |
+| Pull request targeting `main` or `master` | `playwright.yml` | UI and API tests run to validate the proposed changes | GitHub/Discord status messages may be sent |
+| Push to `main` | `static.yml` | Tests run and the Playwright report is deployed to GitHub Pages | GitHub/Discord `test` and `deploy` status messages may be sent |
+| Every day at `15:30 UTC` (`21:30` Bangladesh time) | `qa-monitor.yml` | Full QA suite runs, Allure history is generated, and the dashboard is deployed to GitHub Pages | GitHub/Discord `monitor` status; custom failure alert if tests fail |
+| Manual **Run workflow** | `qa-monitor.yml` | The nightly QA monitoring workflow runs immediately | GitHub/Discord `monitor` status; custom failure alert if tests fail |
 
-The main purpose of this project is to catch regressions automatically after commits and pull requests, while the nightly monitor provides an additional daily health check. Discord can show both successful and failed `main` workflow runs when the repository is connected through a GitHub/Discord integration. In addition, the QA monitor workflow sends its own custom alert when the scheduled or manually triggered test execution fails.
+The main purpose of this project is to catch regressions automatically after commits and pull requests, while the nightly monitor provides an additional daily health check. Discord can show both successful and failed `main` workflow runs when the repository is connected through a GitHub/Discord integration.
+
+Because multiple workflows run for a push to `main`, Discord may show several messages for one commit, such as `test success`, `deploy success`, `monitor success`, or `GitHub Actions checks success`. Failure messages can appear in the same way. These messages are workflow/check status notifications and are separate from the custom QA failure alert.
 
 ## What is covered
 
@@ -129,12 +131,17 @@ Failure notifications use a GitHub Actions secret named `DISCORD_WEBHOOK`. To co
 2. Open the repository's **Settings → Secrets and variables → Actions**.
 3. Add an Actions secret named `DISCORD_WEBHOOK` containing the webhook URL.
 
-The custom Discord step in `qa-monitor.yml` runs only when the scheduled or manually triggered test execution fails. If successful `main` runs also appear in Discord, those messages are produced by the repository's GitHub/Discord integration rather than this custom failure step.
+There are two Discord notification sources:
+
+1. The repository's GitHub/Discord integration reports workflow and check statuses, including successful and failed `test`, `deploy`, and `monitor` runs.
+2. The custom Discord step in `qa-monitor.yml` uses the `DISCORD_WEBHOOK` secret and runs when the scheduled or manually triggered test execution fails.
+
+This is why both success and failure messages can appear, and why one run can produce more than one Discord message.
 
 ### Other workflows
 
 - `playwright.yml` runs tests on pushes and pull requests targeting `main` or `master` and uploads the Playwright HTML report as an artifact.
-- `static.yml` deploys the Playwright report to GitHub Pages when changes are pushed to `main`.
+- `static.yml` runs the Playwright tests and deploys the resulting Playwright report to GitHub Pages when changes are pushed to `main`.
 
 ## Project structure
 

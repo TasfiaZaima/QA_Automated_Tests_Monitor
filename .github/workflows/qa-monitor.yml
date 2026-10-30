@@ -49,8 +49,10 @@ jobs:
           path: gh-pages-dir
 
       - name: Build Allure Report
+        id: build_allure
         uses: simple-elf/allure-report-action@master
         if: always()
+        continue-on-error: true
         with:
           allure_results: allure-results
           gh_pages: gh-pages-dir
@@ -58,11 +60,27 @@ jobs:
           allure_history: allure-history
           keep_reports: 20
 
+      - name: Ensure Allure Pages content exists
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p allure-history
+          if [ ! -f allure-history/index.html ]; then
+            cat > allure-history/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+            <head><meta charset="utf-8"><title>QA Monitor</title></head>
+            <body><h1>Allure report unavailable</h1><p>Report generation did not complete successfully.</p></body>
+          </html>
+          EOF
+          fi
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         if: always()
 
       - name: Upload Pages Artifact
+        id: upload_pages
         uses: actions/upload-pages-artifact@v3
         if: always()
         with:
@@ -71,10 +89,10 @@ jobs:
       - name: Deploy Health Dashboard
         id: deployment
         uses: actions/deploy-pages@v4
-        if: always()
+        if: always() && steps.upload_pages.outcome == 'success'
 
       - name: Discord Alert on Failure
-        if: always() && steps.playwright_test.outcome == 'failure'
+        if: always() && (steps.playwright_test.outcome == 'failure' || steps.build_allure.outcome == 'failure')
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
@@ -82,3 +100,7 @@ jobs:
                -X POST \
                -d "{\"content\": \"🚨 **QA Monitor: Test Failures Detected!** \nView Live Dashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}" \
                "$WEBHOOK_URL"
+
+      - name: Mark workflow failed when QA or report generation fails
+        if: always() && (steps.playwright_test.outcome == 'failure' || steps.build_allure.outcome == 'failure')
+        run: exit 1

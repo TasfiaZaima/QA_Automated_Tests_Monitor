@@ -47,6 +47,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload Playwright report
+        id: upload_report
         uses: actions/upload-pages-artifact@v3
         if: always()
         with:
@@ -54,7 +55,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-        if: always()
+        if: always() && steps.upload_report.outcome == 'success'
       - name: Mark workflow failed when tests fail
         if: always() && steps.playwright_test.outcome == 'failure'
         run: exit 1
